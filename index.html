@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
   <title>Website Launcher Pro</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -53,7 +52,6 @@
       border-radius: 22px;
       padding: 20px;
       margin-bottom: 20px;
-      backdrop-filter: blur(12px);
     }
 
     .form-grid {
@@ -66,7 +64,7 @@
       width: 100%;
       padding: 14px;
       border-radius: 12px;
-      border: 1px solid rgba(148, 163, 184, 0.25);
+      border: none;
       outline: none;
       font-size: 15px;
       background: #f8fafc;
@@ -97,7 +95,7 @@
 
     .controls {
       display: grid;
-      grid-template-columns: 1.5fr 1fr auto auto auto;
+      grid-template-columns: 1.5fr 1fr auto auto;
       gap: 12px;
       align-items: center;
     }
@@ -120,11 +118,6 @@
     .export-btn {
       background: #38bdf8;
       color: #082f49;
-    }
-
-    .import-btn {
-      background: #a78bfa;
-      color: white;
     }
 
     .danger-btn {
@@ -251,10 +244,6 @@
       padding: 50px 10px;
     }
 
-    .hidden-file {
-      display: none;
-    }
-
     .loading {
       text-align: center;
       color: #cbd5e1;
@@ -314,10 +303,7 @@
 
         <button class="pinned-btn" onclick="openPinned()">Open Pinned</button>
         <button class="export-btn" onclick="exportBackup()">Export Backup</button>
-        <button class="import-btn" onclick="document.getElementById('importFile').click()">Import Backup</button>
       </div>
-
-      <input class="hidden-file" type="file" id="importFile" accept=".json" onchange="importBackup(event)">
     </div>
 
     <div class="links-grid" id="linksContainer"></div>
@@ -500,10 +486,6 @@
 
         const title = document.createElement("div");
         title.className = "site-title";
-        title.innerText = site.name.charAt(0).toUpperCase();
-
-        const title = document.createElement("div");
-        title.className = "site-title";
         title.innerText = site.name;
 
         top.appendChild(avatar);
@@ -583,7 +565,7 @@
 
       window.open(site.link, "_blank");
 
-      const { error } = await supabaseClient
+      await supabaseClient
         .from("websites")
         .update({
           visits: (site.visits || 0) + 1,
@@ -591,9 +573,7 @@
         })
         .eq("id", site.id);
 
-      if (!error) {
-        await loadWebsites();
-      }
+      await loadWebsites();
     }
 
     async function copyLink(index) {
@@ -601,7 +581,7 @@
         await navigator.clipboard.writeText(websites[index].link);
         alert("Link copied.");
       } catch {
-        alert("Copy failed. You can manually copy the link.");
+        alert("Copy failed. Manually copy the link.");
       }
     }
 
@@ -689,65 +669,6 @@
       a.click();
 
       URL.revokeObjectURL(url);
-    }
-
-    async function importBackup(event) {
-      const file = event.target.files[0];
-
-      if (!file) return;
-
-      const reader = new FileReader();
-
-      reader.onload = async function(e) {
-        try {
-          const importedData = JSON.parse(e.target.result);
-
-          if (!Array.isArray(importedData)) {
-            alert("Invalid backup file.");
-            return;
-          }
-
-          const newItems = [];
-
-          importedData.forEach(site => {
-            if (site.name && site.link) {
-              const exists = websites.some(item => item.link === site.link);
-
-              if (!exists) {
-                newItems.push({
-                  name: site.name,
-                  link: site.link,
-                  category: site.category || "General",
-                  pinned: site.pinned || false,
-                  visits: site.visits || 0,
-                  last_opened: site.last_opened || site.lastOpened || null
-                });
-              }
-            }
-          });
-
-          if (newItems.length === 0) {
-            alert("No new websites found in backup.");
-            return;
-          }
-
-          const { error } = await supabaseClient
-            .from("websites")
-            .insert(newItems);
-
-          if (error) {
-            alert("Import failed: " + error.message);
-            return;
-          }
-
-          await loadWebsites();
-          alert("Backup imported successfully.");
-        } catch {
-          alert("Could not import this file.");
-        }
-      };
-
-      reader.readAsText(file);
     }
 
     async function clearAll() {
