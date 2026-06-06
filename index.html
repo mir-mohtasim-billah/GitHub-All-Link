@@ -22,7 +22,7 @@
         radial-gradient(circle at top left, rgba(59, 130, 246, 0.25), transparent 35%),
         radial-gradient(circle at bottom right, rgba(34, 197, 94, 0.20), transparent 35%),
         #020617;
-      color: #ffffff;
+      color: white;
       padding: 25px;
     }
 
@@ -54,13 +54,6 @@
       padding: 20px;
       margin-bottom: 20px;
       backdrop-filter: blur(12px);
-    }
-
-    .auth-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr auto auto;
-      gap: 12px;
-      align-items: center;
     }
 
     .form-grid {
@@ -102,21 +95,6 @@
       color: white;
     }
 
-    .login-btn {
-      background: #2563eb;
-      color: white;
-    }
-
-    .signup-btn {
-      background: #facc15;
-      color: #111827;
-    }
-
-    .danger-btn {
-      background: #ef4444;
-      color: white;
-    }
-
     .controls {
       display: grid;
       grid-template-columns: 1.5fr 1fr auto auto auto;
@@ -146,6 +124,11 @@
 
     .import-btn {
       background: #a78bfa;
+      color: white;
+    }
+
+    .danger-btn {
+      background: #ef4444;
       color: white;
     }
 
@@ -272,17 +255,14 @@
       display: none;
     }
 
-    .logged-user {
+    .loading {
+      text-align: center;
       color: #cbd5e1;
-      line-height: 1.7;
-    }
-
-    .mainApp {
+      margin-bottom: 20px;
       display: none;
     }
 
     @media (max-width: 850px) {
-      .auth-grid,
       .form-grid,
       .controls {
         grid-template-columns: 1fr;
@@ -304,72 +284,52 @@
 
     <div class="header">
       <h1>🚀 Website Launcher Pro</h1>
-      <p>Save all your GitHub-hosted websites in one place and open them from any device.</p>
+      <p>Save all your websites in one Supabase database and open them from any device.</p>
     </div>
 
-    <div class="panel" id="authBox">
-      <div class="auth-grid">
-        <input type="email" id="emailInput" placeholder="Email address">
-        <input type="password" id="passwordInput" placeholder="Password">
-        <button class="login-btn" onclick="signIn()">Login</button>
-        <button class="signup-btn" onclick="signUp()">Create Account</button>
+    <div class="loading" id="loadingText">Loading websites...</div>
+
+    <div class="panel">
+      <div class="form-grid">
+        <input type="text" id="siteName" placeholder="Website name">
+        <input type="text" id="siteLink" placeholder="Website link">
+        <input type="text" id="siteCategory" placeholder="Category e.g. Portfolio">
+        <button class="save-btn" id="saveBtn" onclick="saveWebsite()">Save Website</button>
       </div>
     </div>
 
-    <div class="panel" id="userBox" style="display:none;">
-      <div class="logged-user">
-        <strong id="userEmail"></strong>
-        <br>
-        Your links are now saved in Supabase and will appear on any device after login.
+    <div class="panel">
+      <div class="stats">
+        <span id="totalText">Total: 0</span>
+        <span id="pinnedText">Pinned: 0</span>
+        <span id="visitedText">Total Opens: 0</span>
       </div>
-      <br>
-      <button class="danger-btn" onclick="signOut()">Logout</button>
+
+      <div class="controls">
+        <input type="text" id="searchInput" placeholder="Search by name, link, or category..." onkeyup="displayWebsites()">
+
+        <select id="categoryFilter" onchange="displayWebsites()">
+          <option value="all">All Categories</option>
+        </select>
+
+        <button class="pinned-btn" onclick="openPinned()">Open Pinned</button>
+        <button class="export-btn" onclick="exportBackup()">Export Backup</button>
+        <button class="import-btn" onclick="document.getElementById('importFile').click()">Import Backup</button>
+      </div>
+
+      <input class="hidden-file" type="file" id="importFile" accept=".json" onchange="importBackup(event)">
     </div>
 
-    <div class="mainApp" id="mainApp">
+    <div class="links-grid" id="linksContainer"></div>
 
-      <div class="panel">
-        <div class="form-grid">
-          <input type="text" id="siteName" placeholder="Website name">
-          <input type="text" id="siteLink" placeholder="Website link">
-          <input type="text" id="siteCategory" placeholder="Category e.g. Portfolio">
-          <button class="save-btn" id="saveBtn" onclick="saveWebsite()">Save Website</button>
-        </div>
-      </div>
-
-      <div class="panel">
-        <div class="stats">
-          <span id="totalText">Total: 0</span>
-          <span id="pinnedText">Pinned: 0</span>
-          <span id="visitedText">Total Opens: 0</span>
-        </div>
-
-        <div class="controls">
-          <input type="text" id="searchInput" placeholder="Search by name, link, or category..." onkeyup="displayWebsites()">
-
-          <select id="categoryFilter" onchange="displayWebsites()">
-            <option value="all">All Categories</option>
-          </select>
-
-          <button class="pinned-btn" onclick="openPinned()">Open Pinned</button>
-          <button class="export-btn" onclick="exportBackup()">Export Backup</button>
-          <button class="import-btn" onclick="document.getElementById('importFile').click()">Import Backup</button>
-        </div>
-
-        <input class="hidden-file" type="file" id="importFile" accept=".json" onchange="importBackup(event)">
-      </div>
-
-      <div class="links-grid" id="linksContainer"></div>
-
-      <div class="empty" id="emptyText">
-        No website saved yet. Add your first website above.
-      </div>
-
-      <br>
-
-      <button class="danger-btn" onclick="clearAll()">Clear All Websites</button>
-
+    <div class="empty" id="emptyText">
+      No website saved yet. Add your first website above.
     </div>
+
+    <br>
+
+    <button class="danger-btn" onclick="clearAll()">Clear All Websites</button>
+
   </div>
 
   <script>
@@ -378,97 +338,22 @@
 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    let currentUser = null;
     let websites = [];
     let editIndex = null;
 
-    async function checkUser() {
-      const { data, error } = await supabaseClient.auth.getUser();
-
-      if (error) {
-        console.log(error.message);
-      }
-
-      if (data && data.user) {
-        currentUser = data.user;
-
-        document.getElementById("authBox").style.display = "none";
-        document.getElementById("userBox").style.display = "block";
-        document.getElementById("mainApp").style.display = "block";
-        document.getElementById("userEmail").innerText = "Logged in as: " + currentUser.email;
-
-        await loadWebsites();
-      } else {
-        currentUser = null;
-        websites = [];
-
-        document.getElementById("authBox").style.display = "block";
-        document.getElementById("userBox").style.display = "none";
-        document.getElementById("mainApp").style.display = "none";
-      }
-    }
-
-    async function signUp() {
-      const email = document.getElementById("emailInput").value.trim();
-      const password = document.getElementById("passwordInput").value.trim();
-
-      if (email === "" || password === "") {
-        alert("Please enter email and password.");
-        return;
-      }
-
-      const { error } = await supabaseClient.auth.signUp({
-        email: email,
-        password: password
-      });
-
-      if (error) {
-        alert(error.message);
-      } else {
-        alert("Account created. Now login. If email confirmation is enabled, check your email first.");
-      }
-    }
-
-    async function signIn() {
-      const email = document.getElementById("emailInput").value.trim();
-      const password = document.getElementById("passwordInput").value.trim();
-
-      if (email === "" || password === "") {
-        alert("Please enter email and password.");
-        return;
-      }
-
-      const { error } = await supabaseClient.auth.signInWithPassword({
-        email: email,
-        password: password
-      });
-
-      if (error) {
-        alert(error.message);
-      } else {
-        document.getElementById("emailInput").value = "";
-        document.getElementById("passwordInput").value = "";
-        await checkUser();
-      }
-    }
-
-    async function signOut() {
-      await supabaseClient.auth.signOut();
-      currentUser = null;
-      websites = [];
-      editIndex = null;
-      await checkUser();
-    }
-
     async function loadWebsites() {
+      showLoading(true);
+
       const { data, error } = await supabaseClient
         .from("websites")
         .select("*")
         .order("pinned", { ascending: false })
         .order("name", { ascending: true });
 
+      showLoading(false);
+
       if (error) {
-        alert(error.message);
+        alert("Load failed: " + error.message);
         return;
       }
 
@@ -477,11 +362,6 @@
     }
 
     async function saveWebsite() {
-      if (!currentUser) {
-        alert("Please login first.");
-        return;
-      }
-
       let name = document.getElementById("siteName").value.trim();
       let link = document.getElementById("siteLink").value.trim();
       let category = document.getElementById("siteCategory").value.trim();
@@ -516,7 +396,7 @@
           });
 
         if (error) {
-          alert(error.message);
+          alert("Save failed: " + error.message);
           return;
         }
       } else {
@@ -541,7 +421,7 @@
           .eq("id", siteId);
 
         if (error) {
-          alert(error.message);
+          alert("Update failed: " + error.message);
           return;
         }
 
@@ -617,6 +497,10 @@
         const avatar = document.createElement("div");
         avatar.className = "avatar";
         avatar.innerText = site.name.charAt(0).toUpperCase();
+
+        const title = document.createElement("div");
+        title.className = "site-title";
+        title.innerText = site.name.charAt(0).toUpperCase();
 
         const title = document.createElement("div");
         title.className = "site-title";
@@ -732,7 +616,7 @@
         .eq("id", site.id);
 
       if (error) {
-        alert(error.message);
+        alert("Pin failed: " + error.message);
         return;
       }
 
@@ -762,7 +646,7 @@
         .eq("id", websites[index].id);
 
       if (error) {
-        alert(error.message);
+        alert("Delete failed: " + error.message);
         return;
       }
 
@@ -801,7 +685,7 @@
 
       const a = document.createElement("a");
       a.href = url;
-      a.download = "website-launcher-supabase-backup.json";
+      a.download = "website-launcher-backup.json";
       a.click();
 
       URL.revokeObjectURL(url);
@@ -852,7 +736,7 @@
             .insert(newItems);
 
           if (error) {
-            alert(error.message);
+            alert("Import failed: " + error.message);
             return;
           }
 
@@ -875,7 +759,7 @@
         .neq("id", "00000000-0000-0000-0000-000000000000");
 
       if (error) {
-        alert(error.message);
+        alert("Clear failed: " + error.message);
         return;
       }
 
@@ -918,6 +802,10 @@
       document.getElementById("siteCategory").value = "";
     }
 
+    function showLoading(status) {
+      document.getElementById("loadingText").style.display = status ? "block" : "none";
+    }
+
     document.addEventListener("keydown", function(e) {
       if (e.key === "Enter") {
         const active = document.activeElement.id;
@@ -929,21 +817,10 @@
         ) {
           saveWebsite();
         }
-
-        if (
-          active === "emailInput" ||
-          active === "passwordInput"
-        ) {
-          signIn();
-        }
       }
     });
 
-    supabaseClient.auth.onAuthStateChange(function() {
-      checkUser();
-    });
-
-    checkUser();
+    loadWebsites();
   </script>
 </body>
 </html>
