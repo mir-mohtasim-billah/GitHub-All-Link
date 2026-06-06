@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>My Website Launcher Pro</title>
+
+  <title>Website Launcher Pro</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
     * {
@@ -53,6 +56,13 @@
       backdrop-filter: blur(12px);
     }
 
+    .auth-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto auto;
+      gap: 12px;
+      align-items: center;
+    }
+
     .form-grid {
       display: grid;
       grid-template-columns: 1fr 1.7fr 1fr auto;
@@ -92,6 +102,21 @@
       color: white;
     }
 
+    .login-btn {
+      background: #2563eb;
+      color: white;
+    }
+
+    .signup-btn {
+      background: #facc15;
+      color: #111827;
+    }
+
+    .danger-btn {
+      background: #ef4444;
+      color: white;
+    }
+
     .controls {
       display: grid;
       grid-template-columns: 1.5fr 1fr auto auto auto;
@@ -109,11 +134,6 @@
       margin-bottom: 15px;
     }
 
-    .action-btn {
-      background: #334155;
-      color: white;
-    }
-
     .pinned-btn {
       background: #facc15;
       color: #111827;
@@ -126,11 +146,6 @@
 
     .import-btn {
       background: #a78bfa;
-      color: white;
-    }
-
-    .danger-btn {
-      background: #ef4444;
       color: white;
     }
 
@@ -156,11 +171,19 @@
       border-color: rgba(59, 130, 246, 0.55);
     }
 
+    .pinned-mark {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      font-size: 18px;
+    }
+
     .card-top {
       display: flex;
       gap: 12px;
       align-items: center;
       margin-bottom: 13px;
+      padding-right: 25px;
     }
 
     .avatar {
@@ -238,13 +261,6 @@
       grid-column: span 2;
     }
 
-    .pinned-mark {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      font-size: 18px;
-    }
-
     .empty {
       text-align: center;
       color: #cbd5e1;
@@ -256,7 +272,17 @@
       display: none;
     }
 
+    .logged-user {
+      color: #cbd5e1;
+      line-height: 1.7;
+    }
+
+    .mainApp {
+      display: none;
+    }
+
     @media (max-width: 850px) {
+      .auth-grid,
       .form-grid,
       .controls {
         grid-template-columns: 1fr;
@@ -278,57 +304,184 @@
 
     <div class="header">
       <h1>🚀 Website Launcher Pro</h1>
-      <p>One page to save, manage, search, backup, and open all your GitHub-hosted websites.</p>
+      <p>Save all your GitHub-hosted websites in one place and open them from any device.</p>
     </div>
 
-    <div class="panel">
-      <div class="form-grid">
-        <input type="text" id="siteName" placeholder="Website name">
-        <input type="text" id="siteLink" placeholder="Website link">
-        <input type="text" id="siteCategory" placeholder="Category e.g. Portfolio">
-        <button class="save-btn" id="saveBtn" onclick="saveWebsite()">Save Website</button>
+    <div class="panel" id="authBox">
+      <div class="auth-grid">
+        <input type="email" id="emailInput" placeholder="Email address">
+        <input type="password" id="passwordInput" placeholder="Password">
+        <button class="login-btn" onclick="signIn()">Login</button>
+        <button class="signup-btn" onclick="signUp()">Create Account</button>
       </div>
     </div>
 
-    <div class="panel">
-      <div class="stats">
-        <span id="totalText">Total: 0</span>
-        <span id="pinnedText">Pinned: 0</span>
-        <span id="visitedText">Total Opens: 0</span>
+    <div class="panel" id="userBox" style="display:none;">
+      <div class="logged-user">
+        <strong id="userEmail"></strong>
+        <br>
+        Your links are now saved in Supabase and will appear on any device after login.
       </div>
-
-      <div class="controls">
-        <input type="text" id="searchInput" placeholder="Search by name, link, or category..." onkeyup="displayWebsites()">
-
-        <select id="categoryFilter" onchange="displayWebsites()">
-          <option value="all">All Categories</option>
-        </select>
-
-        <button class="pinned-btn" onclick="openPinned()">Open Pinned</button>
-        <button class="export-btn" onclick="exportBackup()">Export Backup</button>
-        <button class="import-btn" onclick="document.getElementById('importFile').click()">Import Backup</button>
-      </div>
-
-      <input class="hidden-file" type="file" id="importFile" accept=".json" onchange="importBackup(event)">
+      <br>
+      <button class="danger-btn" onclick="signOut()">Logout</button>
     </div>
 
-    <div class="links-grid" id="linksContainer"></div>
+    <div class="mainApp" id="mainApp">
 
-    <div class="empty" id="emptyText">
-      No website saved yet. Add your first website above.
+      <div class="panel">
+        <div class="form-grid">
+          <input type="text" id="siteName" placeholder="Website name">
+          <input type="text" id="siteLink" placeholder="Website link">
+          <input type="text" id="siteCategory" placeholder="Category e.g. Portfolio">
+          <button class="save-btn" id="saveBtn" onclick="saveWebsite()">Save Website</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="stats">
+          <span id="totalText">Total: 0</span>
+          <span id="pinnedText">Pinned: 0</span>
+          <span id="visitedText">Total Opens: 0</span>
+        </div>
+
+        <div class="controls">
+          <input type="text" id="searchInput" placeholder="Search by name, link, or category..." onkeyup="displayWebsites()">
+
+          <select id="categoryFilter" onchange="displayWebsites()">
+            <option value="all">All Categories</option>
+          </select>
+
+          <button class="pinned-btn" onclick="openPinned()">Open Pinned</button>
+          <button class="export-btn" onclick="exportBackup()">Export Backup</button>
+          <button class="import-btn" onclick="document.getElementById('importFile').click()">Import Backup</button>
+        </div>
+
+        <input class="hidden-file" type="file" id="importFile" accept=".json" onchange="importBackup(event)">
+      </div>
+
+      <div class="links-grid" id="linksContainer"></div>
+
+      <div class="empty" id="emptyText">
+        No website saved yet. Add your first website above.
+      </div>
+
+      <br>
+
+      <button class="danger-btn" onclick="clearAll()">Clear All Websites</button>
+
     </div>
-
-    <br>
-
-    <button class="danger-btn" onclick="clearAll()">Clear All Websites</button>
-
   </div>
 
   <script>
-    let websites = JSON.parse(localStorage.getItem("proWebsites")) || [];
+    const SUPABASE_URL = "https://efuphoyrzxnjfagjaded.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_Lsc2NwxNGFJlLXM9n34d4g_uD05Li_V";
+
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let currentUser = null;
+    let websites = [];
     let editIndex = null;
 
-    function saveWebsite() {
+    async function checkUser() {
+      const { data, error } = await supabaseClient.auth.getUser();
+
+      if (error) {
+        console.log(error.message);
+      }
+
+      if (data && data.user) {
+        currentUser = data.user;
+
+        document.getElementById("authBox").style.display = "none";
+        document.getElementById("userBox").style.display = "block";
+        document.getElementById("mainApp").style.display = "block";
+        document.getElementById("userEmail").innerText = "Logged in as: " + currentUser.email;
+
+        await loadWebsites();
+      } else {
+        currentUser = null;
+        websites = [];
+
+        document.getElementById("authBox").style.display = "block";
+        document.getElementById("userBox").style.display = "none";
+        document.getElementById("mainApp").style.display = "none";
+      }
+    }
+
+    async function signUp() {
+      const email = document.getElementById("emailInput").value.trim();
+      const password = document.getElementById("passwordInput").value.trim();
+
+      if (email === "" || password === "") {
+        alert("Please enter email and password.");
+        return;
+      }
+
+      const { error } = await supabaseClient.auth.signUp({
+        email: email,
+        password: password
+      });
+
+      if (error) {
+        alert(error.message);
+      } else {
+        alert("Account created. Now login. If email confirmation is enabled, check your email first.");
+      }
+    }
+
+    async function signIn() {
+      const email = document.getElementById("emailInput").value.trim();
+      const password = document.getElementById("passwordInput").value.trim();
+
+      if (email === "" || password === "") {
+        alert("Please enter email and password.");
+        return;
+      }
+
+      const { error } = await supabaseClient.auth.signInWithPassword({
+        email: email,
+        password: password
+      });
+
+      if (error) {
+        alert(error.message);
+      } else {
+        document.getElementById("emailInput").value = "";
+        document.getElementById("passwordInput").value = "";
+        await checkUser();
+      }
+    }
+
+    async function signOut() {
+      await supabaseClient.auth.signOut();
+      currentUser = null;
+      websites = [];
+      editIndex = null;
+      await checkUser();
+    }
+
+    async function loadWebsites() {
+      const { data, error } = await supabaseClient
+        .from("websites")
+        .select("*")
+        .order("pinned", { ascending: false })
+        .order("name", { ascending: true });
+
+      if (error) {
+        alert(error.message);
+        return;
+      }
+
+      websites = data || [];
+      displayWebsites();
+    }
+
+    async function saveWebsite() {
+      if (!currentUser) {
+        alert("Please login first.");
+        return;
+      }
+
       let name = document.getElementById("siteName").value.trim();
       let link = document.getElementById("siteLink").value.trim();
       let category = document.getElementById("siteCategory").value.trim();
@@ -346,53 +499,82 @@
         category = "General";
       }
 
-      let duplicate = websites.some((site, index) => site.link === link && index !== editIndex);
-
-      if (duplicate) {
-        alert("This website link is already saved.");
-        return;
-      }
-
-      let data = {
-        name: name,
-        link: link,
-        category: category,
-        pinned: editIndex !== null ? websites[editIndex].pinned : false,
-        visits: editIndex !== null ? websites[editIndex].visits : 0,
-        lastOpened: editIndex !== null ? websites[editIndex].lastOpened : "Never"
-      };
-
       if (editIndex === null) {
-        websites.push(data);
+        const exists = websites.some(site => site.link === link);
+
+        if (exists) {
+          alert("This website link is already saved.");
+          return;
+        }
+
+        const { error } = await supabaseClient
+          .from("websites")
+          .insert({
+            name: name,
+            link: link,
+            category: category
+          });
+
+        if (error) {
+          alert(error.message);
+          return;
+        }
       } else {
-        websites[editIndex] = data;
+        const siteId = websites[editIndex].id;
+
+        const duplicate = websites.some((site, index) => {
+          return site.link === link && index !== editIndex;
+        });
+
+        if (duplicate) {
+          alert("This website link is already saved.");
+          return;
+        }
+
+        const { error } = await supabaseClient
+          .from("websites")
+          .update({
+            name: name,
+            link: link,
+            category: category
+          })
+          .eq("id", siteId);
+
+        if (error) {
+          alert(error.message);
+          return;
+        }
+
         editIndex = null;
         document.getElementById("saveBtn").innerText = "Save Website";
       }
 
-      saveToStorage();
       clearInputs();
-      displayWebsites();
+      await loadWebsites();
     }
 
     function displayWebsites() {
-      let container = document.getElementById("linksContainer");
-      let emptyText = document.getElementById("emptyText");
-      let searchValue = document.getElementById("searchInput").value.toLowerCase();
-      let selectedCategory = document.getElementById("categoryFilter").value;
+      const container = document.getElementById("linksContainer");
+      const emptyText = document.getElementById("emptyText");
+      const searchValue = document.getElementById("searchInput").value.toLowerCase();
+      const selectedCategory = document.getElementById("categoryFilter").value;
 
       container.innerHTML = "";
 
       updateStats();
-      updateCategoryFilter();
+      updateCategoryFilter(selectedCategory);
 
       let filtered = websites.filter(site => {
-        let matchesSearch =
-          site.name.toLowerCase().includes(searchValue) ||
-          site.link.toLowerCase().includes(searchValue) ||
-          site.category.toLowerCase().includes(searchValue);
+        const name = (site.name || "").toLowerCase();
+        const link = (site.link || "").toLowerCase();
+        const category = (site.category || "General").toLowerCase();
 
-        let matchesCategory =
+        const matchesSearch =
+          name.includes(searchValue) ||
+          link.includes(searchValue) ||
+          category.includes(searchValue);
+
+        const matchesCategory =
           selectedCategory === "all" || site.category === selectedCategory;
 
         return matchesSearch && matchesCategory;
@@ -406,61 +588,101 @@
 
       if (filtered.length === 0) {
         emptyText.style.display = "block";
+
+        if (websites.length === 0) {
+          emptyText.innerText = "No website saved yet. Add your first website above.";
+        } else {
+          emptyText.innerText = "No matching website found.";
+        }
+
         return;
       }
 
       emptyText.style.display = "none";
 
       filtered.forEach(site => {
-        let originalIndex = websites.indexOf(site);
+        const originalIndex = websites.findIndex(item => item.id === site.id);
 
-        let card = document.createElement("div");
+        const card = document.createElement("div");
         card.className = "card";
 
-        let pinnedMark = document.createElement("div");
+        const pinnedMark = document.createElement("div");
         pinnedMark.className = "pinned-mark";
         pinnedMark.innerText = site.pinned ? "📌" : "";
         card.appendChild(pinnedMark);
 
-        let top = document.createElement("div");
+        const top = document.createElement("div");
         top.className = "card-top";
 
-        let avatar = document.createElement("div");
+        const avatar = document.createElement("div");
         avatar.className = "avatar";
         avatar.innerText = site.name.charAt(0).toUpperCase();
 
-        let title = document.createElement("div");
+        const title = document.createElement("div");
         title.className = "site-title";
         title.innerText = site.name;
 
         top.appendChild(avatar);
         top.appendChild(title);
 
-        let category = document.createElement("div");
+        const category = document.createElement("div");
         category.className = "category";
-        category.innerText = site.category;
+        category.innerText = site.category || "General";
 
-        let url = document.createElement("div");
+        const url = document.createElement("div");
         url.className = "url";
         url.innerText = site.link;
 
-        let meta = document.createElement("div");
+        const meta = document.createElement("div");
         meta.className = "meta";
         meta.innerHTML = `
-          Opens: ${site.visits}<br>
-          Last opened: ${site.lastOpened}
+          Opens: ${site.visits || 0}<br>
+          Last opened: ${site.last_opened ? new Date(site.last_opened).toLocaleString() : "Never"}
         `;
 
-        let buttons = document.createElement("div");
+        const buttons = document.createElement("div");
         buttons.className = "card-buttons";
 
-        buttons.innerHTML = `
-          <button class="open-btn" onclick="openWebsite(${originalIndex})">Open</button>
-          <button class="copy-btn" onclick="copyLink(${originalIndex})">Copy</button>
-          <button class="pin-btn" onclick="togglePin(${originalIndex})">${site.pinned ? "Unpin" : "Pin"}</button>
-          <button class="edit-btn" onclick="editWebsite(${originalIndex})">Edit</button>
-          <button class="delete-btn" onclick="deleteWebsite(${originalIndex})">Delete</button>
-        `;
+        const openBtn = document.createElement("button");
+        openBtn.className = "open-btn";
+        openBtn.innerText = "Open";
+        openBtn.onclick = function() {
+          openWebsite(originalIndex);
+        };
+
+        const copyBtn = document.createElement("button");
+        copyBtn.className = "copy-btn";
+        copyBtn.innerText = "Copy";
+        copyBtn.onclick = function() {
+          copyLink(originalIndex);
+        };
+
+        const pinBtn = document.createElement("button");
+        pinBtn.className = "pin-btn";
+        pinBtn.innerText = site.pinned ? "Unpin" : "Pin";
+        pinBtn.onclick = function() {
+          togglePin(originalIndex);
+        };
+
+        const editBtn = document.createElement("button");
+        editBtn.className = "edit-btn";
+        editBtn.innerText = "Edit";
+        editBtn.onclick = function() {
+          editWebsite(originalIndex);
+        };
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "delete-btn";
+        deleteBtn.innerText = "Delete";
+        deleteBtn.onclick = function() {
+          deleteWebsite(originalIndex);
+        };
+
+        buttons.appendChild(openBtn);
+        buttons.appendChild(copyBtn);
+        buttons.appendChild(pinBtn);
+        buttons.appendChild(editBtn);
+        buttons.appendChild(deleteBtn);
 
         card.appendChild(top);
         card.appendChild(category);
@@ -472,29 +694,55 @@
       });
     }
 
-    function openWebsite(index) {
-      websites[index].visits++;
-      websites[index].lastOpened = new Date().toLocaleString();
-      saveToStorage();
-      window.open(websites[index].link, "_blank");
-      displayWebsites();
+    async function openWebsite(index) {
+      const site = websites[index];
+
+      window.open(site.link, "_blank");
+
+      const { error } = await supabaseClient
+        .from("websites")
+        .update({
+          visits: (site.visits || 0) + 1,
+          last_opened: new Date().toISOString()
+        })
+        .eq("id", site.id);
+
+      if (!error) {
+        await loadWebsites();
+      }
     }
 
-    function copyLink(index) {
-      navigator.clipboard.writeText(websites[index].link);
-      alert("Link copied!");
+    async function copyLink(index) {
+      try {
+        await navigator.clipboard.writeText(websites[index].link);
+        alert("Link copied.");
+      } catch {
+        alert("Copy failed. You can manually copy the link.");
+      }
     }
 
-    function togglePin(index) {
-      websites[index].pinned = !websites[index].pinned;
-      saveToStorage();
-      displayWebsites();
+    async function togglePin(index) {
+      const site = websites[index];
+
+      const { error } = await supabaseClient
+        .from("websites")
+        .update({
+          pinned: !site.pinned
+        })
+        .eq("id", site.id);
+
+      if (error) {
+        alert(error.message);
+        return;
+      }
+
+      await loadWebsites();
     }
 
     function editWebsite(index) {
       document.getElementById("siteName").value = websites[index].name;
       document.getElementById("siteLink").value = websites[index].link;
-      document.getElementById("siteCategory").value = websites[index].category;
+      document.getElementById("siteCategory").value = websites[index].category || "General";
 
       editIndex = index;
       document.getElementById("saveBtn").innerText = "Update Website";
@@ -505,16 +753,24 @@
       });
     }
 
-    function deleteWebsite(index) {
-      if (confirm("Delete this website?")) {
-        websites.splice(index, 1);
-        saveToStorage();
-        displayWebsites();
+    async function deleteWebsite(index) {
+      if (!confirm("Delete this website?")) return;
+
+      const { error } = await supabaseClient
+        .from("websites")
+        .delete()
+        .eq("id", websites[index].id);
+
+      if (error) {
+        alert(error.message);
+        return;
       }
+
+      await loadWebsites();
     }
 
-    function openPinned() {
-      let pinnedSites = websites.filter(site => site.pinned);
+    async function openPinned() {
+      const pinnedSites = websites.filter(site => site.pinned);
 
       if (pinnedSites.length === 0) {
         alert("No pinned websites found.");
@@ -524,56 +780,83 @@
       pinnedSites.forEach(site => {
         window.open(site.link, "_blank");
       });
+
+      for (const site of pinnedSites) {
+        await supabaseClient
+          .from("websites")
+          .update({
+            visits: (site.visits || 0) + 1,
+            last_opened: new Date().toISOString()
+          })
+          .eq("id", site.id);
+      }
+
+      await loadWebsites();
     }
 
     function exportBackup() {
-      let data = JSON.stringify(websites, null, 2);
-      let blob = new Blob([data], { type: "application/json" });
-      let url = URL.createObjectURL(blob);
+      const data = JSON.stringify(websites, null, 2);
+      const blob = new Blob([data], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
 
-      let a = document.createElement("a");
+      const a = document.createElement("a");
       a.href = url;
-      a.download = "website-launcher-backup.json";
+      a.download = "website-launcher-supabase-backup.json";
       a.click();
 
       URL.revokeObjectURL(url);
     }
 
-    function importBackup(event) {
-      let file = event.target.files[0];
+    async function importBackup(event) {
+      const file = event.target.files[0];
 
       if (!file) return;
 
-      let reader = new FileReader();
+      const reader = new FileReader();
 
-      reader.onload = function(e) {
+      reader.onload = async function(e) {
         try {
-          let importedData = JSON.parse(e.target.result);
+          const importedData = JSON.parse(e.target.result);
 
           if (!Array.isArray(importedData)) {
             alert("Invalid backup file.");
             return;
           }
 
+          const newItems = [];
+
           importedData.forEach(site => {
             if (site.name && site.link) {
-              let exists = websites.some(item => item.link === site.link);
+              const exists = websites.some(item => item.link === site.link);
 
               if (!exists) {
-                websites.push({
+                newItems.push({
                   name: site.name,
                   link: site.link,
                   category: site.category || "General",
                   pinned: site.pinned || false,
                   visits: site.visits || 0,
-                  lastOpened: site.lastOpened || "Never"
+                  last_opened: site.last_opened || site.lastOpened || null
                 });
               }
             }
           });
 
-          saveToStorage();
-          displayWebsites();
+          if (newItems.length === 0) {
+            alert("No new websites found in backup.");
+            return;
+          }
+
+          const { error } = await supabaseClient
+            .from("websites")
+            .insert(newItems);
+
+          if (error) {
+            alert(error.message);
+            return;
+          }
+
+          await loadWebsites();
           alert("Backup imported successfully.");
         } catch {
           alert("Could not import this file.");
@@ -583,40 +866,50 @@
       reader.readAsText(file);
     }
 
-    function clearAll() {
-      if (confirm("Are you sure you want to delete all websites?")) {
-        websites = [];
-        saveToStorage();
-        displayWebsites();
+    async function clearAll() {
+      if (!confirm("Are you sure you want to delete all websites?")) return;
+
+      const { error } = await supabaseClient
+        .from("websites")
+        .delete()
+        .neq("id", "00000000-0000-0000-0000-000000000000");
+
+      if (error) {
+        alert(error.message);
+        return;
       }
+
+      await loadWebsites();
     }
 
     function updateStats() {
-      let total = websites.length;
-      let pinned = websites.filter(site => site.pinned).length;
-      let totalVisits = websites.reduce((sum, site) => sum + site.visits, 0);
+      const total = websites.length;
+      const pinned = websites.filter(site => site.pinned).length;
+      const totalVisits = websites.reduce((sum, site) => sum + (site.visits || 0), 0);
 
       document.getElementById("totalText").innerText = "Total: " + total;
       document.getElementById("pinnedText").innerText = "Pinned: " + pinned;
       document.getElementById("visitedText").innerText = "Total Opens: " + totalVisits;
     }
 
-    function updateCategoryFilter() {
-      let filter = document.getElementById("categoryFilter");
-      let currentValue = filter.value;
-
-      let categories = [...new Set(websites.map(site => site.category))];
+    function updateCategoryFilter(previousValue) {
+      const filter = document.getElementById("categoryFilter");
+      const categories = [...new Set(websites.map(site => site.category || "General"))];
 
       filter.innerHTML = `<option value="all">All Categories</option>`;
 
       categories.forEach(category => {
-        let option = document.createElement("option");
+        const option = document.createElement("option");
         option.value = category;
         option.innerText = category;
         filter.appendChild(option);
       });
 
-      filter.value = currentValue;
+      if (categories.includes(previousValue)) {
+        filter.value = previousValue;
+      } else {
+        filter.value = "all";
+      }
     }
 
     function clearInputs() {
@@ -625,13 +918,9 @@
       document.getElementById("siteCategory").value = "";
     }
 
-    function saveToStorage() {
-      localStorage.setItem("proWebsites", JSON.stringify(websites));
-    }
-
     document.addEventListener("keydown", function(e) {
       if (e.key === "Enter") {
-        let active = document.activeElement.id;
+        const active = document.activeElement.id;
 
         if (
           active === "siteName" ||
@@ -640,10 +929,21 @@
         ) {
           saveWebsite();
         }
+
+        if (
+          active === "emailInput" ||
+          active === "passwordInput"
+        ) {
+          signIn();
+        }
       }
     });
 
-    displayWebsites();
+    supabaseClient.auth.onAuthStateChange(function() {
+      checkUser();
+    });
+
+    checkUser();
   </script>
 </body>
 </html>
